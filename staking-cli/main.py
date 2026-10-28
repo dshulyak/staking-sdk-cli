@@ -8,6 +8,7 @@ from rich.prompt import Prompt
 from rich.align import Align
 from src.logger import init_logging
 from src.add_validator import register_validator, register_validator_cli
+from src.add_receiver_key import register_receiver_key, register_receiver_key_cli
 from src.delegate import delegate_to_validator, delegate_to_validator_cli
 from src.undelegate import undelegate_from_validator, undelegate_from_validator_cli
 from src.withdraw import withdraw_delegation, withdraw_delegation_cli
@@ -91,7 +92,8 @@ class StakingCLI:
         [{self.colors["primary_text"]}]6. Compound[/]\n
         [{self.colors["primary_text"]}]7. Change Commission[/]\n
         [{self.colors["primary_text"]}]8. Query[/]\n
-        [{self.colors["primary_text"]}]9. Exit[/]\n
+        [{self.colors["primary_text"]}]9. Add Receiver Key[/]\n
+        [{self.colors["primary_text"]}]10. Exit[/]\n
         '''
         menu_text = Align(menu_text, align="left")
         main_panel = Panel(
@@ -101,9 +103,9 @@ class StakingCLI:
             expand=False
         )
         while True:
-            choices = [str(x) for x in range(1,10)]
+            choices = [str(x) for x in range(1,11)]
             self.console.print(main_panel)
-            choice = number_prompt("Enter a number as a choice", choices, default="9")
+            choice = number_prompt("Enter a number as a choice", choices, default="10")
 
             if choice == "1":
                 register_validator(self.config, self.signer)
@@ -130,6 +132,9 @@ class StakingCLI:
                 query(self.config, self.signer)
                 self.log.info("Exited Query Menu\n\n")
             elif choice == "9":
+                register_receiver_key(self.config, self.signer)
+                self.log.info("Exited Add Receiver Key\n\n")
+            elif choice == "10":
                 self.log.info("Staking CLI has been exited!")
                 sys.exit()
 
@@ -146,7 +151,14 @@ class StakingCLI:
             bls_privkey = self.args.bls_privkey
             auth_address = self.args.auth_address
             amount = self.args.amount
-            register_validator_cli(self.config, self.signer, secp_privkey, bls_privkey, auth_address, amount)
+            register_validator_cli(
+                self.config, self.signer, secp_privkey, bls_privkey, auth_address, amount,
+                receiver_privkey=self.args.receiver_privkey,
+            )
+        elif self.args.command == "add-receiver-key":
+            register_receiver_key_cli(
+                self.config, self.signer, self.args.validator_id, self.args.receiver_privkey
+            )
         elif self.args.command == "delegate":
             validator_id = self.args.validator_id
             amount = self.args.amount

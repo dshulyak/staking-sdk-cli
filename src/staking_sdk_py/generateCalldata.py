@@ -1,23 +1,20 @@
 from blake3 import blake3
-from eth_keys import keys
 import staking_sdk_py.constants as constants
 import staking_sdk_py.keyGenerator as keyGenerator
-from typing import Union
+from staking_sdk_py.receiver_key import prove_receiver_key_registration
+from typing import Optional, Union
 import eth_abi
 
 
-from blake3 import blake3
-from eth_keys import keys
 from py_ecc.bls import G2ProofOfPossession as bls
-from py_ecc.optimized_bls12_381 import curve_order
-
-from eth_abi import encode
 
 def add_validator(
     k: "keyGenerator.KeyGenerator",
     amount: int,
     auth_address: str,
-    commission: int = 0
+    commission: int = 0,
+    *,
+    chain_id: Optional[int] = None,
 ) -> str:
     secp_pub_key = k.pub_secp_key()
     bls_pub_key = k.pub_bls_key()
@@ -34,12 +31,44 @@ def add_validator(
         int(amount).to_bytes(32, byteorder='big'),
         int(commission).to_bytes(32, byteorder='big'),
     ]
+    receiver_secret = k.priv_receiver_key()
+    receiver_proof = None
+    if receiver_secret is not None:
+        if chain_id is None:
+            raise ValueError("Chain ID is required when registering a receiver key")
+        receiver_public_key, receiver_proof = prove_receiver_key_registration(
+            chain_id, k.get_eth_address, receiver_secret
+        )
+        payload_parts.insert(2, receiver_public_key)
     payload = b''.join(payload_parts)
 
     secp_sig = secp_priv_key.sign_msg_hash_non_recoverable(blake3(payload).digest()).to_bytes()
     bls_sig = bls.Sign(bls_privkey, payload)
 
-    return "0x" + constants.ADD_VALIDATOR_SELECTOR + eth_abi.encode(['bytes', 'bytes', 'bytes'], [payload, secp_sig, bls_sig]).hex()
+    values = [payload, secp_sig, bls_sig]
+    types = ['bytes'] * 3
+    selector = constants.ADD_VALIDATOR_SELECTOR
+    if receiver_proof is not None:
+        selector = constants.ADD_VALIDATOR_RECEIVER_SELECTOR
+        values.append(receiver_proof)
+        types.append('(bytes,bytes32,bytes32)')
+    return "0x" + selector + eth_abi.encode(types, values).hex()
+
+
+def add_receiver_key(validator_id: int, receiver_secret: bytes, chain_id: int,
+                     validator_address: str) -> str:
+    public_key, proof = prove_receiver_key_registration(
+        chain_id, validator_address, receiver_secret
+    )
+    return "0x" + constants.ADD_RECEIVER_KEY_SELECTOR + eth_abi.encode(
+        ['uint64', 'bytes', '(bytes,bytes32,bytes32)'], [validator_id, public_key, proof]
+    ).hex()
+
+
+def get_receiver_key(validator_id: int) -> str:
+    return "0x" + constants.GET_RECEIVER_KEY_SELECTOR + eth_abi.encode(
+        ['uint64'], [validator_id]
+    ).hex()
 
 
 def strip_0x(s: str) -> str:

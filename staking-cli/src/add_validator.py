@@ -31,11 +31,15 @@ def register_validator(config: dict, signer: Signer):
     # Get privkeys of Validators
     secp_privkey_hex = key_prompt(config, key_type="secp")
     bls_privkey_hex = key_prompt(config, key_type="bls")
+    receiver_privkey_hex = None
+    if Confirm.ask("Include a DKG receiver key (requires the upgraded staking contract)?", default=False):
+        receiver_privkey_hex = Prompt.ask("Receiver private key (hex)", password=True)
 
     # Generate the pubkeys and address
     try:
         keygen = KeyGenerator.from_keys(
-            secp_private_key=secp_privkey_hex, bls_private_key=bls_privkey_hex
+            secp_private_key=secp_privkey_hex, bls_private_key=bls_privkey_hex,
+            receiver_private_key=receiver_privkey_hex,
         )
         secp_pubkey = keygen.pub_secp_key()
         bls_pubkey = keygen.pub_bls_key()
@@ -111,6 +115,8 @@ def register_validator(config: dict, signer: Signer):
         padding=(1, 2),
     )
     console.print(derived_panel)
+    if keygen.pub_receiver_key() is not None:
+        console.print(f"Receiver public key: {keygen.pub_receiver_key().hex()}")
 
     # Verify inputs and derivations
     is_confirmed = Confirm.ask(
@@ -125,7 +131,11 @@ def register_validator(config: dict, signer: Signer):
         return
 
     # Calldata for tx
-    add_validator_call_data = add_validator(keygen, amount, auth_address)
+    try:
+        add_validator_call_data = add_validator(keygen, amount, auth_address, chain_id=chain_id)
+    except ValueError as error:
+        log.error(f"Could not prepare registration: {error}")
+        return
     if config["log_level"] == "debug":
         console.print(add_validator_call_data)
 
@@ -161,7 +171,8 @@ def register_validator(config: dict, signer: Signer):
 
 
 def register_validator_cli(
-    config: dict, signer: Signer, secp_privkey: str, bls_privkey: str, auth_address: str, amount: int
+    config: dict, signer: Signer, secp_privkey: str, bls_privkey: str, auth_address: str, amount: int,
+    receiver_privkey=None,
 ):
     log = init_logging(config["log_level"].upper())
 
@@ -187,12 +198,15 @@ def register_validator_cli(
     # Generate the pubkeys and address
     try:
         keygen = KeyGenerator.from_keys(
-            secp_private_key=secp_privkey, bls_private_key=bls_privkey
+            secp_private_key=secp_privkey, bls_private_key=bls_privkey,
+            receiver_private_key=receiver_privkey,
         )
         secp_pubkey = keygen.pub_secp_key()
         bls_pubkey = keygen.pub_bls_key()
         log.info(f"SECP Pubkey: {secp_pubkey.hex()}")
         log.info(f"BLS Pubkey: {bls_pubkey.hex()}")
+        if keygen.pub_receiver_key() is not None:
+            log.info(f"Receiver Pubkey: {keygen.pub_receiver_key().hex()}")
     except Exception as e:
         log.error(
             f"Key derivation failed: Your keys fall in the correct curve order but are incompatible with the cryptographic scheme: {e}"
@@ -206,7 +220,11 @@ def register_validator_cli(
 
     w3 = Web3(Web3.HTTPProvider(rpc_url))
     amount_wei = wei(amount)
-    add_validator_call_data = add_validator(keygen, amount_wei, auth_address)
+    try:
+        add_validator_call_data = add_validator(keygen, amount_wei, auth_address, chain_id=chain_id)
+    except ValueError as error:
+        log.error(f"Could not prepare registration: {error}")
+        return
     log.debug(add_validator_call_data)
 
     is_confirmed = Confirm.ask(

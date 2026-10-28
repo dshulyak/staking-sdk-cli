@@ -3,6 +3,7 @@ import staking_sdk_py.constants as constants
 from staking_sdk_py.generateCalldata import (
     get_epoch,
     get_validator,
+    get_receiver_key,
     get_delegator,
     get_withdrawal_request,
     get_proposer_val_id,
@@ -30,6 +31,7 @@ def call_getter(w3, getter_name: str, contract_address: str, *args) -> tuple:
     calldata_builder = {
         "get_epoch": lambda : get_epoch(),
         "get_validator": lambda val_id: get_validator(val_id),
+        "get_receiver_key": lambda val_id: get_receiver_key(val_id),
         "get_delegator": lambda val_id, delegator: get_delegator(val_id, delegator),
         "get_withdrawal_request": lambda val_id, delegator, wid: get_withdrawal_request(val_id, delegator, wid),
         "get_proposer_val_id": lambda : get_proposer_val_id(),

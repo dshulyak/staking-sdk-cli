@@ -6,6 +6,9 @@ CONTRACTADDRESS = "0x0000000000000000000000000000000000001000"
 
 # Write selectors
 ADD_VALIDATOR_SELECTOR = "f145204c"
+ADD_VALIDATOR_RECEIVER_SELECTOR = "3e4616bf"
+ADD_RECEIVER_KEY_SELECTOR = "3a3b9a22"
+GET_RECEIVER_KEY_SELECTOR = "83afcd10"
 DELEGATE_SELECTOR = "84994fec"
 UNDELEGATE_SELECTOR = "5cf41514"
 COMPOUND_SELECTOR = "b34fea67"
@@ -30,6 +33,7 @@ GET_DELEGATORS_SELECTOR = "a0843a26"
 
 
 GETTER_ABIS = {
+    "get_receiver_key": ["bytes"],
     "get_epoch": ["uint64", "bool"],
     "get_validator": ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256","uint256", "uint256", "bytes", "bytes"],
     "get_delegator": ["uint256", "uint256", "uint256", "uint256", "uint256", "uint64", "uint64"],

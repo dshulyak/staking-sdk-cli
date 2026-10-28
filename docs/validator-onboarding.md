@@ -41,6 +41,11 @@ python staking-cli/main.py add-validator \
 Authorized address is the address that will have control over validator operations on-chain. This address can be different from the funded address.
 Make sure you have control over the authorized address you provided.
 
+For networks with DKG receiver-key registration enabled, add
+`--receiver-privkey "$RECEIVER_PRIVATE_KEY"` to this command. Use the same separate
+receiver key configured for the validator node and retain it for future epochs.
+The CLI displays its public key alongside the consensus public keys for review.
+
 2. ⚠️**Verify the public keys are matching** before entering `yes` to continue: If wrong addresses are used, the validator keys will need to rotate and reconfigured.
 
 ```sh

@@ -5,6 +5,7 @@ A CLI tool to interact with Monad's staking contract and execute operations by i
 ## Features
 
 - Adding/Registering a Validator
+- Registering a DKG receiver key for an existing validator
 - Delegating stake to a Validator
 - Undelegating stake from a Validator
 - Withdrawing pending undelegations using withdrawal IDs
@@ -129,13 +130,14 @@ $ source cli-venv/bin/activate
 $ python staking-cli/main.py --help
 
 usage: main.py [-h]
-               {add-validator,delegate,undelegate,withdraw,claim-rewards,compound-rewards,change-commission,query,tui} ...
+               {add-validator,add-receiver-key,delegate,undelegate,withdraw,claim-rewards,compound-rewards,change-commission,query,tui} ...
 
 Staking CLI for Validators on Monad
 
 positional arguments:
-  {add-validator,delegate,undelegate,withdraw,claim-rewards,compound-rewards,change-commission,query,tui}
+  {add-validator,add-receiver-key,delegate,undelegate,withdraw,claim-rewards,compound-rewards,change-commission,query,tui}
     add-validator       Add a new validator to network
+    add-receiver-key    Register a DKG receiver key for an existing validator
     delegate            Delegate to a validator in the network
     undelegate          Undelegate Stake from validator
     withdraw            Withdraw undelegated stake from validator
@@ -174,7 +176,9 @@ $ python staking-cli/main.py tui
 │                                      │
 │        8. Query                      │
 │                                      │
-│        9. Exit                       │
+│        9. Add Receiver Key           │
+│                                      │
+│       10. Exit                       │
 │                                      │
 │                                      │
 ╰──────────────────────────────────────╯
@@ -213,6 +217,44 @@ $ python staking-cli/main.py tui
 - Validator registration: ~2M gas
 - Delegation operations: ~1M gas
 - The CLI automatically sets appropriate gas limits
+
+### DKG Receiver Keys
+
+On networks with the upgraded staking contract, supply the validator's separate
+receiver private key when registering:
+
+```sh
+python staking-cli/main.py add-validator \
+  --secp-privkey "$SECP_PRIVATE_KEY" \
+  --bls-privkey "$BLS_PRIVATE_KEY" \
+  --receiver-privkey "$RECEIVER_PRIVATE_KEY" \
+  --auth-address "$AUTH_ADDRESS" \
+  --amount 100000
+```
+
+Use the same receiver key that the validator node will use. It is registered
+once and reused across epochs. The CLI creates its RFC 9380 proof locally, bound
+to the configured chain ID and the validator's consensus-key address. Verify the
+displayed receiver public key before submitting. Omitting `--receiver-privkey`
+uses the original two-key registration method for older networks.
+
+For an existing validator, use its authorized signer to enroll the receiver key:
+
+```sh
+python staking-cli/main.py add-receiver-key \
+  --validator-id 42 \
+  --receiver-privkey "$RECEIVER_PRIVATE_KEY" \
+  --config-path ./config.toml
+```
+
+This command reads the validator's consensus key from the chain and checks that
+the signer is authorized and no receiver key is already registered. Both actions
+are also available in TUI mode.
+
+The proof is an ABI tuple `(bytes image, bytes32 challenge, bytes32 response)`;
+the compressed image must be exactly 33 bytes. Proof verification follows BTX
+DKG Section 2.1; hashing follows RFC 9380:
+https://www.rfc-editor.org/rfc/rfc9380
 
 ## Troubleshooting
 

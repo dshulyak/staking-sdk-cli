@@ -29,6 +29,24 @@ INFO     Tx status: 1
 INFO     Tx hash: 0x1234567890abcdef...
 ```
 
+On networks with DKG receiver-key registration enabled, also supply
+`--receiver-privkey` with the separate receiver key configured for the validator.
+The public key is included in the registration payload, and its proof of
+possession is generated locally using the configured chain ID.
+
+### Add Receiver Key
+
+Enroll a receiver key for an existing validator using its authorized signer.
+This requires the upgraded staking contract and a validator without a receiver
+key.
+
+```sh
+python main.py add-receiver-key \
+--validator-id 42 \
+--receiver-privkey "$RECEIVER_PRIVATE_KEY" \
+--config-path ~/config.toml
+```
+
 ### Delegate
 
 Delegate MON tokens to a validator.

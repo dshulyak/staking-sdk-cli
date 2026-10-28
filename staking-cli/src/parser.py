@@ -12,6 +12,9 @@ def init_parser() -> argparse.ArgumentParser:
     add_validator_parser = subparsers.add_parser(
         "add-validator", help="Add a new validator to network"
     )
+    receiver_key_parser = subparsers.add_parser(
+        "add-receiver-key", help="Register a DKG receiver key for an existing validator"
+    )
     delegate_parser = subparsers.add_parser(
         "delegate", help="Delegate to a validator in the network"
     )
@@ -52,6 +55,14 @@ def init_parser() -> argparse.ArgumentParser:
         required=True,
         help="bls privkey of validator to be added (id-bls)",
     )
+    add_validator_parser.add_argument(
+        "--receiver-privkey",
+        type=str,
+        help="Separate DKG receiver private key; selects the upgraded registration method",
+    )
+    receiver_key_parser.add_argument("--validator-id", type=int, required=True)
+    receiver_key_parser.add_argument("--receiver-privkey", type=str, required=True)
+    receiver_key_parser.add_argument("--config-path", default="./config.toml")
     add_validator_parser.add_argument(
         "--amount",
         type=int,
